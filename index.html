@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkMaster - Gestão de Estacionamento</title>
+    <!-- Tailwind CSS CDN (Front-end Framework) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <!-- BARRA DE NAVEGAÇÃO -->
+    <nav class="bg-blue-900 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-square-parking text-yellow-400 text-3xl"></i> ParkMaster
+            </h1>
+            <div class="flex gap-4">
+                <button onclick="navigate('patio')" class="hover:bg-blue-800 px-3 py-2 rounded transition"><i class="fa-solid fa-car"></i> Pátio / Entrada</button>
+                <button onclick="navigate('clientes')" class="hover:bg-blue-800 px-3 py-2 rounded transition"><i class="fa-solid fa-users"></i> Clientes/Veículos</button>
+                <button onclick="navigate('precos')" class="hover:bg-blue-800 px-3 py-2 rounded transition"><i class="fa-solid fa-tags"></i> Tabela de Preços</button>
+                <button onclick="navigate('relatorios')" class="hover:bg-blue-800 px-3 py-2 rounded transition"><i class="fa-solid fa-chart-line"></i> Relatórios</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6">
+
+        <!-- DASHBOARD DE RESUMO -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500 flex justify-between items-center">
+                <div>
+                    <p class="text-sm text-gray-500">Vagas Totais</p>
+                    <p class="text-2xl font-bold" id="dash-totais">0</p>
+                </div>
+                <i class="fa-solid fa-parking text-3xl text-blue-500"></i>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500 flex justify-between items-center">
+                <div>
+                    <p class="text-sm text-gray-500">Vagas Livres</p>
+                    <p class="text-2xl font-bold" id="dash-livres">0</p>
+                </div>
+                <i class="fa-solid fa-circle-check text-3xl text-green-500"></i>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500 flex justify-between items-center">
+                <div>
+                    <p class="text-sm text-gray-500">Veículos Estacionados</p>
+                    <p class="text-2xl font-bold" id="dash-ocupados">0</p>
+                </div>
+                <i class="fa-solid fa-car-side text-3xl text-yellow-500"></i>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500 flex justify-between items-center">
+                <div>
+                    <p class="text-sm text-gray-500">Faturamento Hoje</p>
+                    <p class="text-2xl font-bold" id="dash-faturamento">R$ 0,00</p>
+                </div>
+                <i class="fa-solid fa-sack-dollar text-3xl text-purple-500"></i>
+            </div>
+        </div>
+
+        <!-- SEÇÃO: PÁTIO / CONTROLE DE ENTRADA E SAÍDA -->
+        <section id="sec-patio" class="view-section">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- FORMULÁRIO DE ENTRADA -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-bold mb-4 text-blue-900"><i class="fa-solid fa-right-to-bracket"></i> Registrar Entrada</h2>
+                    <form id="form-entrada" onsubmit="controllerEntrada(event)">
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700">Placa do Veículo</label>
+                            <input type="text" id="ent-placa" placeholder="ABC-1234 ou ABC1D23" uppercase class="w-full border p-2 rounded mt-1 font-mono uppercase" required uppercase>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700">Tipo de Vaga</label>
+                            <select id="ent-tipo-vaga" class="w-full border p-2 rounded mt-1">
+                                <option value="Comum">Comum</option>
+                                <option value="Preferencial">Preferencial (PCD/Idoso)</option>
+                                <option value="Moto">Moto</option>
+                                <option value="VIP">VIP / Coberta</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition">Registrar Entrada</button>
+                    </form>
+                </div>
+
+                <!-- LISTA DE VEÍCULOS NO PÁTIO -->
+                <div class="md:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-bold mb-4 text-blue-900"><i class="fa-solid fa-square-p"></i> Veículos Estacionados</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 border-b">
+                                    <th class="p-2">Placa</th>
+                                    <th class="p-2">Tipo Vaga</th>
+                                    <th class="p-2">Entrada</th>
+                                    <th class="p-2">Modelo/Cliente</th>
+                                    <th class="p-2 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-patio">
+                                <!-- Preenchido dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO: CADASTRO DE CLIENTES E VEÍCULOS -->
+        <section id="sec-clientes" class="view-section hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-bold mb-4 text-blue-900"><i class="fa-solid fa-user-plus"></i> Novo Cliente/Veículo</h2>
+                    <form id="form-cliente" onsubmit="controllerCadastrarCliente(event)">
+                        <div class="mb-3"><label class="block text-sm font-medium">Nome do Cliente</label><input type="text" id="cad-nome" class="w-full border p-2 rounded mt-1" required></div>
+                        <div class="mb-3"><label class="block text-sm font-medium">Telefone</label><input type="text" id="cad-tel" class="w-full border p-2 rounded mt-1" required></div>
+                        <div class="mb-3"><label class="block text-sm font-medium">Placa do Veículo</label><input type="text" id="cad-placa" class="w-full border p-2 rounded mt-1 uppercase" required></div>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <div><label class="block text-sm font-medium">Marca/Modelo</label><input type="text" id="cad-modelo" placeholder="Ex: Corolla" class="w-full border p-2 rounded mt-1" required></div>
+                            <div><label class="block text-sm font-medium">Cor</label><input type="text" id="cad-cor" placeholder="Ex: Preto" class="w-full border p-2 rounded mt-1" required></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <div>
+                                <label class="block text-sm font-medium">Tamanho</label>
+                                <select id="cad-tamanho" class="w-full border p-2 rounded mt-1">
+                                    <option value="Pequeno">Pequeno (Hatch)</option>
+                                    <option value="Médio">Médio (Sedan/SUV)</option>
+                                    <option value="Grande">Grande (Pick-up/Van)</option>
+                                </select>
+                            </div>
+                            <div><label class="block text-sm font-medium">Ano</label><input type="number" id="cad-ano" placeholder="2022" class="w-full border p-2 rounded mt-1"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium">Plano Mensal/Anual</label>
+                            <select id="cad-plano" class="w-full border p-2 rounded mt-1">
+                                <option value="Nenhum">Nenhum (Avulso)</option>
+                                <option value="Mensalista">Mensalista</option>
+                                <option value="Anual">Anual</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded transition">Salvar Cadastro</button>
+                    </form>
+                </div>
+
+                <div class="md:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-bold mb-4 text-blue-900"><i class="fa-solid fa-address-book"></i> Clientes Cadastrados</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 border-b">
+                                    <th class="p-2">Nome</th>
+                                    <th class="p-2">Placa</th>
+                                    <th class="p-2">Veículo</th>
+                                    <th class="p-2">Plano</th>
+                                    <th class="p-2 text-center">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-clientes">
+                                <!-- Preenchido dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO: TABELA DE PREÇOS -->
+        <section id="sec-precos" class="view-section hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-4 text-blue-900"><i class="fa-solid fa-coins"></i> Configuração de Tarifas</h2>
+                <form id="form-precos" onsubmit="controllerSalvarPrecos(event)">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="mb-3"><label class="block text-sm font-medium">Valor Hora Avulsa (R$)</label><input type="number" step="0.5" id="prc-hora" class="w-full border p-2 rounded mt-1" required></div>
+                        <div class="mb-3"><label class="block text-sm font-medium">Valor Diária (R$)</label><input type="number" step="1" id="prc-diaria" class="w-full border p-2 rounded mt-1" required></div>
+                        <div class="mb-3"><label class="block text-sm font-medium">Plano Mensal (R$)</label><input type="number" step="1" id="prc-mensal" class="w-full border p-2 rounded mt-1" required></div>
+                        <div class="mb-3"><label class="block text-sm font-medium">Plano Anual (R$)</label><input type="number" step="1" id="prc-anual" class="w-full border p-2 rounded mt-1" required></div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition mt-4">Atualizar Tarifas</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- SEÇÃO: RELATÓRIOS -->
+        <section id="sec-relatorios" class="view-section hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-bold mb-4 text-blue-900"><i class="fa-solid fa-file-invoice-dollar"></i> Histórico de Saídas e Faturamento</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 border-b">
+                                <th class="p-2">Placa</th>
+                                <th class="p-2">Entrada</th>
+                                <th class="p-2">Saída</th>
+                                <th class="p-2">Permanência</th>
+                                <th class="p-2">Valor Pago</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tb-relatorios">
+                            <!-- Preenchido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- MODAL DE CHECKOUT / PAGAMENTO -->
+    <div id="modal-checkout" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h3 class="text-2xl font-bold mb-4 text-blue-900 border-b pb-2">Finalizar Permanência</h3>
+            <div class="space-y-2 mb-4 text-sm">
+                <p><strong>Placa:</strong> <span id="chk-placa" class="font-mono text-lg font-bold"></span></p>
+                <p><strong>Entrada:</strong> <span id="chk-entrada"></span></p>
+                <p><strong>Saída:</strong> <span id="chk-saida"></span></p>
+                <p><strong>Tempo Total:</strong> <span id="chk-tempo"></span></p>
+                <div class="bg-gray-100 p-3 rounded text-center mt-3">
+                    <p class="text-gray-600 text-xs">TOTAL A PAGAR</p>
+                    <p class="text-3xl font-extrabold text-green-600" id="chk-total">R$ 0,00</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="controllerConfirmarSaida()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">Confirmar Pagamento</button>
+                <button onclick="fecharModal()" class="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 rounded">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DA APLICAÇÃO (BACK-END + CONTROLLER + DATABASE SIMULATION) -->
+    <script>
+        /* ==========================================================================
+           1. DATABASE (Camada de Dados / LocalStorage)
+           ========================================================================== */
+        const DB = {
+            get(key) {
+                return JSON.parse(localStorage.getItem('park_' + key)) || null;
+            },
+            set(key, data) {
+                localStorage.setItem('park_' + key, JSON.stringify(data));
+            },
+            init() {
+                if (!this.get('config')) {
+                    this.set('config', { vagasTotais: 20, valorHora: 10, valorDiaria: 50, valorMensal: 250, valorAnual: 2400 });
+                }
+                if (!this.get('estacionados')) this.set('estacionados', []);
+                if (!this.get('clientes')) this.set('clientes', []);
+                if (!this.get('historico')) this.set('historico', []);
+            }
+        };
+
+        let checkoutAtual = null;
+
+        /* ==========================================================================
+           2. BACK-END LOGIC (Regras de Negócio, Cálculos)
+           ========================================================================== */
+        const Service = {
+            calcularValor(entradaIso, meSaida, placa) {
+                const config = DB.get('config');
+                const clientes = DB.get('clientes');
+                const cliente = clientes.find(c => c.placa.toUpperCase() === placa.toUpperCase());
+
+                // Se for mensalista/anual
+                if (cliente && (cliente.plano === 'Mensalista' || cliente.plano === 'Anual')) {
+                    return { total: 0, tempoFormatado: 'Plano Ativo (' + cliente.plano + ')' };
+                }
+
+                const diffMs = meSaida - new Date(entradaIso);
+                const diffMinutos = Math.ceil(diffMs / (1000 * 60));
+                const diffHoras = Math.ceil(diffMinutos / 60);
+
+                let total = 0;
+                if (diffHoras >= 24) {
+                    const dias = Math.ceil(diffHoras / 24);
+                    total = dias * config.valorDiaria;
+                } else {
+                    total = (diffHoras === 0 ? 1 : diffHoras) * config.valorHora;
+                }
+
+                return {
+                    total: total,
+                    tempoFormatado: `${Math.floor(diffMinutos/60)}h ${diffMinutos % 60}m (${diffHoras}h cobradas)`
+                };
+            }
+        };
+
+        /* ==========================================================================
+           3. FRONT-END CONTROLLERS & RENDERING (Interface de Usuário)
+           ========================================================================== */
+        function initApp() {
+            DB.init();
+            renderDash();
+            renderPatio();
+            renderClientes();
+            renderHistorico();
+            carregarPrecosForm();
+        }
+
+        function navigate(view) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById('sec-' + view).classList.remove('hidden');
+        }
+
+        function renderDash() {
+            const config = DB.get('config');
+            const estacionados = DB.get('estacionados');
+            const historico = DB.get('historico');
+
+            const hojeStr = new Date().toLocaleDateString();
+            const faturamentoHoje = historico
+                .filter(h => new Date(h.saida).toLocaleDateString() === hojeStr)
+                .reduce((acc, cur) => acc + cur.valorPago, 0);
+
+            document.getElementById('dash-totais').innerText = config.vagasTotais;
+            document.getElementById('dash-ocupados').innerText = estacionados.length;
+            document.getElementById('dash-livres').innerText = config.vagasTotais - estacionados.length;
+            document.getElementById('dash-faturamento').innerText = `R$ ${faturamentoHoje.toFixed(2)}`;
+        }
+
+        function renderPatio() {
+            const estacionados = DB.get('estacionados');
+            const clientes = DB.get('clientes');
+            const tbody = document.getElementById('tb-patio');
+            tbody.innerHTML = '';
+
+            estacionados.forEach(item => {
+                const cliente = clientes.find(c => c.placa.toUpperCase() === item.placa.toUpperCase());
+                const infoVeiculo = cliente ? `${cliente.modelo} (${cliente.nome})` : 'Avulso';
+
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-2 font-mono font-bold">${item.placa}</td>
+                        <td class="p-2"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">${item.tipoVaga}</span></td>
+                        <td class="p-2 text-sm">${new Date(item.entrada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                        <td class="p-2 text-sm">${infoVeiculo}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="abrirCheckout('${item.placa}')" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded">Dar Saída</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function controllerEntrada(e) {
+            e.preventDefault();
+            const placa = document.getElementById('ent-placa').value.toUpperCase();
+            const tipoVaga = document.getElementById('ent-tipo-vaga').value;
+
+            const estacionados = DB.get('estacionados');
+            if (estacionados.some(x => x.placa === placa)) {
+                alert('Este veículo já está no pátio!');
+                return;
+            }
+
+            estacionados.push({ placa, tipoVaga, entrada: new Date().toISOString() });
+            DB.set('estacionados', estacionados);
+            document.getElementById('form-entrada').reset();
+            
+            renderPatio();
+            renderDash();
+        }
+
+        function abrirCheckout(placa) {
+            const estacionados = DB.get('estacionados');
+            const item = estacionados.find(x => x.placa === placa);
+            if (!item) return;
+
+            const agora = new Date();
+            const calculo = Service.calcularValor(item.entrada, agora, placa);
+
+            checkoutAtual = {
+                placa: item.placa,
+                entrada: item.entrada,
+                saida: agora.toISOString(),
+                valorPago: calculo.total
+            };
+
+            document.getElementById('chk-placa').innerText = item.placa;
+            document.getElementById('chk-entrada').innerText = new Date(item.entrada).toLocaleString();
+            document.getElementById('chk-saida').innerText = agora.toLocaleString();
+            document.getElementById('chk-tempo').innerText = calculo.tempoFormatado;
+            document.getElementById('chk-total').innerText = `R$ ${calculo.total.toFixed(2)}`;
+
+            document.getElementById('modal-checkout').classList.remove('hidden');
+        }
+
+        function fecharModal() {
+            document.getElementById('modal-checkout').classList.add('hidden');
+            checkoutAtual = null;
+        }
+
+        function controllerConfirmarSaida() {
+            if (!checkoutAtual) return;
+
+            // Remove do Pátio
+            let estacionados = DB.get('estacionados');
+            estacionados = estacionados.filter(x => x.placa !== checkoutAtual.placa);
+            DB.set('estacionados', estacionados);
+
+            // Grava Histórico
+            const historico = DB.get('historico');
+            historico.push(checkoutAtual);
+            DB.set('historico', historico);
+
+            fecharModal();
+            renderPatio();
+            renderDash();
+            renderHistorico();
+        }
+
+        function controllerCadastrarCliente(e) {
+            e.preventDefault();
+            const clientes = DB.get('clientes');
+            
+            const novo = {
+                nome: document.getElementById('cad-nome').value,
+                tel: document.getElementById('cad-tel').value,
+                placa: document.getElementById('cad-placa').value.toUpperCase(),
+                modelo: document.getElementById('cad-modelo').value,
+                cor: document.getElementById('cad-cor').value,
+                tamanho: document.getElementById('cad-tamanho').value,
+                ano: document.getElementById('cad-ano').value,
+                plano: document.getElementById('cad-plano').value
+            };
+
+            clientes.push(novo);
+            DB.set('clientes', clientes);
+            document.getElementById('form-cliente').reset();
+            renderClientes();
+        }
+
+        function renderClientes() {
+            const clientes = DB.get('clientes');
+            const tbody = document.getElementById('tb-clientes');
+            tbody.innerHTML = '';
+
+            clientes.forEach((c, index) => {
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50 text-sm">
+                        <td class="p-2">${c.nome}<br><span class="text-xs text-gray-400">${c.tel}</span></td>
+                        <td class="p-2 font-mono font-bold">${c.placa}</td>
+                        <td class="p-2">${c.modelo} (${c.cor}) - ${c.tamanho}</td>
+                        <td class="p-2"><span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">${c.plano}</span></td>
+                        <td class="p-2 text-center">
+                            <button onclick="deletarCliente(${index})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function deletarCliente(index) {
+            const clientes = DB.get('clientes');
+            clientes.splice(index, 1);
+            DB.set('clientes', clientes);
+            renderClientes();
+        }
+
+        function carregarPrecosForm() {
+            const config = DB.get('config');
+            document.getElementById('prc-hora').value = config.valorHora;
+            document.getElementById('prc-diaria').value = config.valorDiaria;
+            document.getElementById('prc-mensal').value = config.valorMensal;
+            document.getElementById('prc-anual').value = config.valorAnual;
+        }
+
+        function controllerSalvarPrecos(e) {
+            e.preventDefault();
+            const config = DB.get('config');
+            config.valorHora = parseFloat(document.getElementById('prc-hora').value);
+            config.valorDiaria = parseFloat(document.getElementById('prc-diaria').value);
+            config.valorMensal = parseFloat(document.getElementById('prc-mensal').value);
+            config.valorAnual = parseFloat(document.getElementById('prc-anual').value);
+            
+            DB.set('config', config);
+            alert('Tabela de preços atualizada com sucesso!');
+        }
+
+        function renderHistorico() {
+            const historico = DB.get('historico');
+            const tbody = document.getElementById('tb-relatorios');
+            tbody.innerHTML = '';
+
+            historico.slice().reverse().forEach(h => {
+                const diffMs = new Date(h.saida) - new Date(h.entrada);
+                const minutos = Math.ceil(diffMs / (1000 * 60));
+
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50 text-sm">
+                        <td class="p-2 font-mono font-bold">${h.placa}</td>
+                        <td class="p-2">${new Date(h.entrada).toLocaleString()}</td>
+                        <td class="p-2">${new Date(h.saida).toLocaleString()}</td>
+                        <td class="p-2">${Math.floor(minutos/60)}h ${minutos%60}m</td>
+                        <td class="p-2 font-bold text-green-600">R$ ${h.valorPago.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Inicialização
+        window.onload = initApp;
+    </script>
+</body>
+</html>
