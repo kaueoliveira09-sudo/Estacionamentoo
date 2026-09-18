@@ -67,8 +67,8 @@
                     <h2 class="text-xl font-bold mb-4 text-blue-900"><i class="fa-solid fa-right-to-bracket"></i> Registrar Entrada</h2>
                     <form id="form-entrada" onsubmit="controllerEntrada(event)">
                         <div class="mb-3">
-                            <label class="block text-sm font-medium text-gray-700">Placa do Veículo</label>
-                            <input type="text" id="ent-placa" placeholder="ABC-1234 ou ABC1D23" uppercase class="w-full border p-2 rounded mt-1 font-mono uppercase" required uppercase>
+                            <label class="block text-sm font-medium text-gray-700">Placa do Veículo (ex: ABC1234)</label>
+                            <input type="text" id="ent-placa" placeholder="ABC-1234 ou ABC1D23" class="w-full border p-2 rounded mt-1 font-mono uppercase" required>
                         </div>
                         <div class="mb-3">
                             <label class="block text-sm font-medium text-gray-700">Tipo de Vaga</label>
@@ -76,7 +76,7 @@
                                 <option value="Comum">Comum</option>
                                 <option value="Preferencial">Preferencial (PCD/Idoso)</option>
                                 <option value="Moto">Moto</option>
-                                <option value="VIP">VIP / Coberta</option>
+                                <option value="VIP">VIP / Coberta (Tarifa Mais Alta)</option>
                             </select>
                         </div>
                         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition">Registrar Entrada</button>
@@ -114,7 +114,7 @@
                     <form id="form-cliente" onsubmit="controllerCadastrarCliente(event)">
                         <div class="mb-3"><label class="block text-sm font-medium">Nome do Cliente</label><input type="text" id="cad-nome" class="w-full border p-2 rounded mt-1" required></div>
                         <div class="mb-3"><label class="block text-sm font-medium">Telefone</label><input type="text" id="cad-tel" class="w-full border p-2 rounded mt-1" required></div>
-                        <div class="mb-3"><label class="block text-sm font-medium">Placa do Veículo</label><input type="text" id="cad-placa" class="w-full border p-2 rounded mt-1 uppercase" required></div>
+                        <div class="mb-3"><label class="block text-sm font-medium">Placa do Veículo</label><input type="text" id="cad-placa" placeholder="ABC-1234" class="w-full border p-2 rounded mt-1 uppercase" required></div>
                         <div class="grid grid-cols-2 gap-2 mb-3">
                             <div><label class="block text-sm font-medium">Marca/Modelo</label><input type="text" id="cad-modelo" placeholder="Ex: Corolla" class="w-full border p-2 rounded mt-1" required></div>
                             <div><label class="block text-sm font-medium">Cor</label><input type="text" id="cad-cor" placeholder="Ex: Preto" class="w-full border p-2 rounded mt-1" required></div>
@@ -170,7 +170,8 @@
                 <h2 class="text-xl font-bold mb-4 text-blue-900"><i class="fa-solid fa-coins"></i> Configuração de Tarifas</h2>
                 <form id="form-precos" onsubmit="controllerSalvarPrecos(event)">
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="mb-3"><label class="block text-sm font-medium">Valor Hora Avulsa (R$)</label><input type="number" step="0.5" id="prc-hora" class="w-full border p-2 rounded mt-1" required></div>
+                        <div class="mb-3"><label class="block text-sm font-medium">Valor Hora Comum (R$)</label><input type="number" step="0.5" id="prc-hora" class="w-full border p-2 rounded mt-1" required></div>
+                        <div class="mb-3"><label class="block text-sm font-medium font-bold text-amber-600">Valor Hora VIP (R$)</label><input type="number" step="0.5" id="prc-hora-vip" class="w-full border p-2 rounded mt-1 border-amber-500 font-bold" required></div>
                         <div class="mb-3"><label class="block text-sm font-medium">Valor Diária (R$)</label><input type="number" step="1" id="prc-diaria" class="w-full border p-2 rounded mt-1" required></div>
                         <div class="mb-3"><label class="block text-sm font-medium">Plano Mensal (R$)</label><input type="number" step="1" id="prc-mensal" class="w-full border p-2 rounded mt-1" required></div>
                         <div class="mb-3"><label class="block text-sm font-medium">Plano Anual (R$)</label><input type="number" step="1" id="prc-anual" class="w-full border p-2 rounded mt-1" required></div>
@@ -240,7 +241,8 @@
             },
             init() {
                 if (!this.get('config')) {
-                    this.set('config', { vagasTotais: 20, valorHora: 10, valorDiaria: 50, valorMensal: 250, valorAnual: 2400 });
+                    // Adicionado valorHoraVip (R$ 20.00 por padrão)
+                    this.set('config', { vagasTotais: 20, valorHora: 10, valorHoraVip: 20, valorDiaria: 50, valorMensal: 250, valorAnual: 2400 });
                 }
                 if (!this.get('estacionados')) this.set('estacionados', []);
                 if (!this.get('clientes')) this.set('clientes', []);
@@ -251,10 +253,18 @@
         let checkoutAtual = null;
 
         /* ==========================================================================
-           2. BACK-END LOGIC (Regras de Negócio, Cálculos)
+           2. VALIDAÇÕES & REGRAS DE NEGÓCIO
            ========================================================================== */
+        function validarPlaca(placa) {
+            // Remove hífens e espaços
+            const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '');
+            // Valida se os primeiros 3 caracteres são letras
+            const regexTresLetras = /^[A-Z]{3}/i;
+            return regexTresLetras.test(placaLimpa);
+        }
+
         const Service = {
-            calcularValor(entradaIso, meSaida, placa) {
+            calcularValor(entradaIso, meSaida, placa, tipoVaga) {
                 const config = DB.get('config');
                 const clientes = DB.get('clientes');
                 const cliente = clientes.find(c => c.placa.toUpperCase() === placa.toUpperCase());
@@ -268,12 +278,17 @@
                 const diffMinutos = Math.ceil(diffMs / (1000 * 60));
                 const diffHoras = Math.ceil(diffMinutos / 60);
 
+                // Define taxa dependendo se a vaga é VIP
+                const taxaHora = (tipoVaga === 'VIP') ? (config.valorHoraVip || config.valorHora * 1.5) : config.valorHora;
+
                 let total = 0;
                 if (diffHoras >= 24) {
                     const dias = Math.ceil(diffHoras / 24);
-                    total = dias * config.valorDiaria;
+                    // Adiciona acréscimo de 50% na diária para vagas VIP
+                    const taxaDiaria = (tipoVaga === 'VIP') ? config.valorDiaria * 1.5 : config.valorDiaria;
+                    total = dias * taxaDiaria;
                 } else {
-                    total = (diffHoras === 0 ? 1 : diffHoras) * config.valorHora;
+                    total = (diffHoras === 0 ? 1 : diffHoras) * taxaHora;
                 }
 
                 return {
@@ -325,11 +340,12 @@
             estacionados.forEach(item => {
                 const cliente = clientes.find(c => c.placa.toUpperCase() === item.placa.toUpperCase());
                 const infoVeiculo = cliente ? `${cliente.modelo} (${cliente.nome})` : 'Avulso';
+                const tagCor = item.tipoVaga === 'VIP' ? 'bg-amber-100 text-amber-800 border border-amber-300 font-bold' : 'bg-blue-100 text-blue-800';
 
                 tbody.innerHTML += `
                     <tr class="border-b hover:bg-gray-50">
                         <td class="p-2 font-mono font-bold">${item.placa}</td>
-                        <td class="p-2"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">${item.tipoVaga}</span></td>
+                        <td class="p-2"><span class="${tagCor} text-xs px-2 py-1 rounded">${item.tipoVaga}</span></td>
                         <td class="p-2 text-sm">${new Date(item.entrada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
                         <td class="p-2 text-sm">${infoVeiculo}</td>
                         <td class="p-2 text-center">
@@ -342,8 +358,14 @@
 
         function controllerEntrada(e) {
             e.preventDefault();
-            const placa = document.getElementById('ent-placa').value.toUpperCase();
+            const placa = document.getElementById('ent-placa').value.toUpperCase().trim();
             const tipoVaga = document.getElementById('ent-tipo-vaga').value;
+
+            // Validação de Placa: Obrigatoriamente iniciar com 3 letras
+            if (!validarPlaca(placa)) {
+                alert('ERRO: A placa informada é inválida! A placa precisa começar obrigatoriamente com 3 letras (ex: ABC1234).');
+                return;
+            }
 
             const estacionados = DB.get('estacionados');
             if (estacionados.some(x => x.placa === placa)) {
@@ -365,7 +387,7 @@
             if (!item) return;
 
             const agora = new Date();
-            const calculo = Service.calcularValor(item.entrada, agora, placa);
+            const calculo = Service.calcularValor(item.entrada, agora, placa, item.tipoVaga);
 
             checkoutAtual = {
                 placa: item.placa,
@@ -409,12 +431,20 @@
 
         function controllerCadastrarCliente(e) {
             e.preventDefault();
+            const placa = document.getElementById('cad-placa').value.toUpperCase().trim();
+
+            // Validação de Placa no Cadastro de Cliente
+            if (!validarPlaca(placa)) {
+                alert('ERRO: A placa informada é inválida! A placa precisa começar obrigatoriamente com 3 letras (ex: ABC1234).');
+                return;
+            }
+
             const clientes = DB.get('clientes');
             
             const novo = {
                 nome: document.getElementById('cad-nome').value,
                 tel: document.getElementById('cad-tel').value,
-                placa: document.getElementById('cad-placa').value.toUpperCase(),
+                placa: placa,
                 modelo: document.getElementById('cad-modelo').value,
                 cor: document.getElementById('cad-cor').value,
                 tamanho: document.getElementById('cad-tamanho').value,
@@ -458,6 +488,7 @@
         function carregarPrecosForm() {
             const config = DB.get('config');
             document.getElementById('prc-hora').value = config.valorHora;
+            document.getElementById('prc-hora-vip').value = config.valorHoraVip || 20;
             document.getElementById('prc-diaria').value = config.valorDiaria;
             document.getElementById('prc-mensal').value = config.valorMensal;
             document.getElementById('prc-anual').value = config.valorAnual;
@@ -467,6 +498,7 @@
             e.preventDefault();
             const config = DB.get('config');
             config.valorHora = parseFloat(document.getElementById('prc-hora').value);
+            config.valorHoraVip = parseFloat(document.getElementById('prc-hora-vip').value);
             config.valorDiaria = parseFloat(document.getElementById('prc-diaria').value);
             config.valorMensal = parseFloat(document.getElementById('prc-mensal').value);
             config.valorAnual = parseFloat(document.getElementById('prc-anual').value);
